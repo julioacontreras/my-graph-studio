@@ -12,14 +12,15 @@ import { Inspector } from "../graph/Inspector";
 import { useExpandNode } from "../graph/useExpandNode";
 import { CypherEditor, type EditorError } from "./CypherEditor";
 import { ResultTabs } from "./ResultTabs";
+import { SHOW_NODES, scopeChanges } from "./snippets";
 import { StatusBar } from "./StatusBar";
+import { TemplateSelect } from "./TemplateSelect";
 
-/** Incluye los nodos sin relaciones; `MATCH (n)-[r]->(m)` no los devolvería. */
-export const INITIAL_QUERY = "MATCH (n) OPTIONAL MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 500";
+export const INITIAL_QUERY = SHOW_NODES;
 const MAX_NODES = 2000;
 
 export function CypherPage() {
-  const { scope } = useSession();
+  const { scope, setScope, refreshDatabases } = useSession();
   const { reload: reloadLabels } = useLabels();
   const [query, setQuery] = useState(INITIAL_QUERY);
   const [result, setResult] = useState<QueryResult | null>(null);
@@ -42,12 +43,20 @@ export function CypherPage() {
       setError(null);
       const s = r.stats;
       if (s.nodes_created || s.nodes_deleted || s.labels_added || s.labels_removed) void reloadLabels();
+
+      // CREATE/DROP DATABASE o SCHEMA: refresca el selector y, si se creó una base, pasa a ella.
+      const ddl = scopeChanges(query);
+      if (ddl.changed) {
+        const created = ddl.created.at(-1);
+        if (created && !ddl.dropped.includes(created)) setScope({ database: created, schema: "public" });
+        refreshDatabases();
+      }
     } catch (e) {
       setError(e);
     } finally {
       setRunning(false);
     }
-  }, [query, scope, reloadLabels]);
+  }, [query, scope, setScope, refreshDatabases, reloadLabels]);
 
   const editorError: EditorError | null =
     error instanceof ApiError && error.line ? { line: error.line, column: error.column ?? 1 } : null;
@@ -55,15 +64,22 @@ export function CypherPage() {
   return (
     <div className="flex h-full">
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-44 shrink-0 flex-col border-b border-line">
+        <div className="flex h-48 shrink-0 flex-col border-b border-line">
+          <div className="flex items-center gap-3 border-b border-line bg-surface px-3 py-1.5">
+            <span className="label-text">Cypher</span>
+            <TemplateSelect onPick={setQuery} />
+            <span
+              className="ml-auto hidden text-[11px] text-muted sm:inline"
+              title="Varias sentencias separadas por ; — se muestran las filas de la última"
+            >
+              <kbd className="rounded border border-line bg-elevated px-1.5 py-0.5 text-[10px]">⌘/Ctrl ↵</kbd> ejecutar
+            </span>
+            <Button variant="primary" className="py-1 text-xs" onClick={() => void run()} disabled={running}>
+              <Play size={12} /> Ejecutar
+            </Button>
+          </div>
           <div className="min-h-0 flex-1">
             <CypherEditor value={query} onChange={setQuery} onRun={() => void run()} error={editorError} />
-          </div>
-          <div className="flex items-center justify-between border-t border-line bg-surface px-3 py-1.5">
-            <span className="text-xs text-muted">Ctrl/Cmd + Enter para ejecutar. Varias sentencias separadas por ;</span>
-            <Button variant="primary" onClick={() => void run()} disabled={running}>
-              <Play size={14} /> Ejecutar
-            </Button>
           </div>
         </div>
 
