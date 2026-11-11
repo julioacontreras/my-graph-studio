@@ -1,0 +1,34 @@
+# MyGraph Studio + mygraph-server.
+# El puerto 6660 no se publica: MyGraph v0.2 no tiene autenticación ni TLS.
+#
+#   docker compose up -d mygraph      # solo la base de datos (desarrollo)
+#   docker compose up -d --build      # Studio completo en http://localhost:8000
+services:
+  mygraph:
+    image: ghcr.io/julioacontreras/mygraph:latest   # necesita MyGraph >= 0.2 (índices, SHOW INDEXES)
+    volumes:
+      - mygraph-data:/data
+    init: true
+    restart: unless-stopped
+    # Solo en desarrollo, para el gateway en local. Quitar en producción.
+    ports:
+      - "127.0.0.1:6660:6660"
+
+  studio:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    environment:
+      MYGRAPH_HOST: mygraph
+      MYGRAPH_PORT: "6660"
+    volumes:
+      - studio-data:/data
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mygraph
+    restart: unless-stopped
+
+volumes:
+  mygraph-data:
+  studio-data:
