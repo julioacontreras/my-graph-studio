@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  Editor visual de <a href="https://github.com/julioacontreras/my-graph">MyGraph</a>: ejecuta Cypher y explora el resultado como grafo, tabla o JSON.
+  Visual editor for <a href="https://github.com/julioacontreras/my-graph">MyGraph</a>: run Cypher and explore the result as a graph, table or JSON.
 </p>
 
 <p align="center">
@@ -17,135 +17,134 @@
 </p>
 
 <p align="center">
-  <a href="#instalación"><strong>Instalación</strong></a> ·
-  <a href="#uso"><strong>Uso</strong></a> ·
-  <a href="#configuración"><strong>Configuración</strong></a> ·
-  <a href="#desarrollo"><strong>Desarrollo</strong></a> ·
-  <a href="docs/documentaci_n_my_graph_studio.md"><strong>Especificación</strong></a>
+  <a href="#installation"><strong>Installation</strong></a> ·
+  <a href="#usage"><strong>Usage</strong></a> ·
+  <a href="#configuration"><strong>Configuration</strong></a> ·
+  <a href="#development"><strong>Development</strong></a> ·
+  <a href="docs/documentaci_n_my_graph_studio.md"><strong>Specification</strong></a>
 </p>
 
 ---
 
-MyGraph Studio sirve para trabajar con una base de datos MyGraph desde el
-navegador. Puedes ejecutar Cypher, ver el resultado como grafo, editar nodos y
-relaciones, definir etiquetas con tipos y colores, y exportar o importar el
-grafo.
+MyGraph Studio lets you work with a MyGraph database from the browser. You can
+run Cypher, view the result as a graph, edit nodes and relationships, define
+labels with types and colors, and export or import the graph.
 
-El navegador no puede abrir el socket TCP de MyGraph (puerto 6660), así que el
-Studio tiene dos partes: un frontend en React y un **gateway** en FastAPI. El
-gateway traduce HTTP/JSON al [protocolo v1](https://github.com/julioacontreras/my-graph/blob/main/PROTOCOL.md)
-con [`mygraph-client`](https://pypi.org/project/mygraph-client/).
+The browser cannot open MyGraph's TCP socket (port 6660), so the Studio has two
+parts: a React frontend and a FastAPI **gateway**. The gateway translates
+HTTP/JSON to the [v1 protocol](https://github.com/julioacontreras/my-graph/blob/main/PROTOCOL.md)
+using [`mygraph-client`](https://pypi.org/project/mygraph-client/).
 
 ```
-navegador ──HTTP/JSON──▶ gateway (FastAPI, :8000) ──protocolo v1──▶ mygraph-server (:6660)
+browser ──HTTP/JSON──▶ gateway (FastAPI, :8000) ──protocol v1──▶ mygraph-server (:6660)
 ```
 
 > [!IMPORTANT]
-> Necesita **MyGraph 0.2** o superior. MyGraph v0.2 no tiene autenticación ni
-> TLS: no publiques el puerto 6660 fuera de la red del gateway. El Studio
-> tampoco tiene login todavía.
+> Requires **MyGraph 0.2** or later. MyGraph v0.2 has no authentication or
+> TLS: do not expose port 6660 outside the gateway's network. The Studio has
+> no login yet either.
 
-## Contenido
+## Contents
 
-- [Funcionalidades](#funcionalidades)
-- [Instalación](#instalación)
-- [Uso](#uso)
-- [Configuración](#configuración)
-- [Desarrollo](#desarrollo)
-- [Arquitectura](#arquitectura)
-- [Límites](#límites)
-- [Licencia](#licencia)
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Architecture](#architecture)
+- [Limitations](#limitations)
+- [License](#license)
 
-## Funcionalidades
+## Features
 
-| Módulo | Qué hace |
+| Module | What it does |
 |---|---|
-| **Cypher & Graph** | Editor Cypher (CodeMirror) con errores marcados en línea y columna. Scripts con varias sentencias separadas por `;`. Vistas **Grafo** (D3), **Tabla** y **JSON**. Inspector para editar propiedades y etiquetas, borrar nodos y relaciones, y expandir vecinos. Selector de base de datos y schema. |
-| **Label Designer** | Define por etiqueta un color, una descripción y propiedades con tipo (`String`, `Integer`, `Float`, `Boolean`, `Date`) y las marcas `required`, `unique` e `indexed`. Crea los índices en MyGraph, lista los nodos que no cumplen y propone definiciones a partir de los datos. |
-| **Import / Export** | Exporta a JSON o a un script Cypher. Importa JSON o `.cypher`/`.cql`/`.cyp` en modo **añadir** o **sobrescribir**, por lotes y con un resumen previo. |
+| **Cypher & Graph** | Cypher editor (CodeMirror) with errors marked by line and column. Scripts with multiple statements separated by `;`. **Graph** (D3), **Table** and **JSON** views. Inspector to edit properties and labels, delete nodes and relationships, and expand neighbors. Database and schema selector. |
+| **Label Designer** | Define per label a color, a description and typed properties (`String`, `Integer`, `Float`, `Boolean`, `Date`) with the `required`, `unique` and `indexed` flags. Creates the indexes in MyGraph, lists nodes that don't comply and suggests definitions based on the data. |
+| **Import / Export** | Export to JSON or to a Cypher script. Import JSON or `.cypher`/`.cql`/`.cyp` in **append** or **overwrite** mode, in batches and with a preview summary. |
 
-## Instalación
+## Installation
 
-### Docker Compose (recomendado)
+### Docker Compose (recommended)
 
-Desde la raíz del repositorio:
+From the repository root:
 
 ```bash
-docker compose up -d --build     # MyGraph + Studio en http://localhost:8000
-docker compose ps                # comprueba que los dos servicios están en marcha
-docker compose logs -f studio    # sigue los logs del Studio
-docker compose down              # para todo; los datos se quedan en los volúmenes
-docker compose down -v           # para todo y BORRA los datos
+docker compose up -d --build     # MyGraph + Studio at http://localhost:8000
+docker compose ps                # check that both services are running
+docker compose logs -f studio    # follow the Studio logs
+docker compose down              # stop everything; data stays in the volumes
+docker compose down -v           # stop everything and DELETE the data
 ```
 
-El servicio `studio` construye el frontend y lo sirve desde el gateway, en un
-solo contenedor. Los datos se guardan en dos volúmenes:
+The `studio` service builds the frontend and serves it from the gateway, in a
+single container. Data is stored in two volumes:
 
-| Volumen | Contenido |
+| Volume | Contents |
 |---|---|
-| `mygraph-data` | El grafo (WAL y snapshots de MyGraph) |
-| `studio-data` | `studio.db`: definiciones de etiqueta del Studio (SQLite) |
+| `mygraph-data` | The graph (MyGraph WAL and snapshots) |
+| `studio-data` | `studio.db`: Studio label definitions (SQLite) |
 
 > [!WARNING]
-> En producción, borra el bloque `ports` del servicio `mygraph` en
-> [`docker-compose.yml`](docker-compose.yml). Solo hace falta para el gateway
-> en local.
+> In production, remove the `ports` block from the `mygraph` service in
+> [`docker-compose.yml`](docker-compose.yml). It is only needed for running the
+> gateway locally.
 
-### Contra un MyGraph que ya tienes
+### Against an existing MyGraph
 
-Arranca solo el Studio y apunta `MYGRAPH_HOST` / `MYGRAPH_PORT` a tu servidor
-(ver [Configuración](#configuración)):
+Start only the Studio and point `MYGRAPH_HOST` / `MYGRAPH_PORT` at your server
+(see [Configuration](#configuration)):
 
 ```bash
 docker build -f gateway/Dockerfile -t mygraph-studio .
 docker run -d -p 8000:8000 -v studio-data:/data \
-  -e MYGRAPH_HOST=mi-servidor -e MYGRAPH_PORT=6660 mygraph-studio
+  -e MYGRAPH_HOST=my-server -e MYGRAPH_PORT=6660 mygraph-studio
 ```
 
-## Uso
+## Usage
 
-Abre http://localhost:8000.
+Open http://localhost:8000.
 
-1. Elige la base de datos y el schema arriba (por defecto `default` / `public`).
-2. Escribe una consulta en **Cypher** y ejecútala:
+1. Pick the database and schema at the top (default `default` / `public`).
+2. Write a **Cypher** query and run it:
 
    ```cypher
    CREATE (a:Person {name: 'Ada'})-[:KNOWS]->(b:Person {name: 'Alan'});
    MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 100
    ```
 
-3. Haz clic en un nodo para editarlo en el inspector o para expandir sus vecinos.
-4. En **Labels**, define `Person` con `name: String, required, unique`. Desde
-   ahí el Studio valida las escrituras que hace y crea el índice.
-5. En **Import / Export**, descarga el grafo como JSON o Cypher.
+3. Click a node to edit it in the inspector or to expand its neighbors.
+4. In **Labels**, define `Person` with `name: String, required, unique`. From
+   then on the Studio validates the writes it makes and creates the index.
+5. In **Import / Export**, download the graph as JSON or Cypher.
 
-La API del gateway está documentada en http://localhost:8000/docs (OpenAPI) y
-en la [especificación](docs/documentaci_n_my_graph_studio.md#api-del-gateway).
-Para comprobar que responde: `curl http://localhost:8000/api/health`.
+The gateway API is documented at http://localhost:8000/docs (OpenAPI) and in
+the [specification](docs/documentaci_n_my_graph_studio.md#api-del-gateway).
+To check that it responds: `curl http://localhost:8000/api/health`.
 
-## Configuración
+## Configuration
 
-El gateway lee variables de entorno o un fichero `gateway/.env` (copia
+The gateway reads environment variables or a `gateway/.env` file (copy
 [`gateway/.env.example`](gateway/.env.example)).
 
-| Variable | Por defecto | Descripción |
+| Variable | Default | Description |
 |---|---|---|
-| `MYGRAPH_HOST` | `localhost` | Host de `mygraph-server` |
-| `MYGRAPH_PORT` | `6660` | Puerto de `mygraph-server` |
-| `MYGRAPH_TIMEOUT` | `30` | Timeout de las peticiones a MyGraph, en segundos |
-| `STUDIO_DB_PATH` | `studio.db` | SQLite con las definiciones de etiqueta (`/data/studio.db` en Docker) |
-| `CORS_ORIGINS` | `[]` | Lista JSON de orígenes permitidos. Vacía en desarrollo: Vite hace de proxy |
-| `STATIC_DIR` | — | Carpeta con el build del frontend. Si existe, el gateway la sirve |
+| `MYGRAPH_HOST` | `localhost` | `mygraph-server` host |
+| `MYGRAPH_PORT` | `6660` | `mygraph-server` port |
+| `MYGRAPH_TIMEOUT` | `30` | Timeout for requests to MyGraph, in seconds |
+| `STUDIO_DB_PATH` | `studio.db` | SQLite file with label definitions (`/data/studio.db` in Docker) |
+| `CORS_ORIGINS` | `[]` | JSON list of allowed origins. Empty in development: Vite acts as a proxy |
+| `STATIC_DIR` | — | Folder with the frontend build. If it exists, the gateway serves it |
 
-En el frontend, `GATEWAY_URL` cambia el destino del proxy `/api` de Vite (por
-defecto `http://localhost:8000`).
+In the frontend, `GATEWAY_URL` changes the target of Vite's `/api` proxy
+(default `http://localhost:8000`).
 
-## Desarrollo
+## Development
 
-Requisitos: Docker, [uv](https://docs.astral.sh/uv/) y Node 22.
+Requirements: Docker, [uv](https://docs.astral.sh/uv/) and Node 22.
 
 ```bash
-docker compose up -d mygraph                        # mygraph-server en 127.0.0.1:6660
+docker compose up -d mygraph                        # mygraph-server at 127.0.0.1:6660
 
 cd gateway
 uv sync
@@ -156,59 +155,59 @@ npm install
 npm run dev                                         # http://localhost:5173, /api → gateway
 ```
 
-### Tests y lint
+### Tests and lint
 
 ```bash
 cd gateway
-uv run pytest                    # los de integración se saltan si no hay mygraph-server
+uv run pytest                    # integration tests are skipped if there is no mygraph-server
 uv run ruff check src tests
 
 cd frontend
 npm run typecheck
-npm run build                    # typecheck + build de producción en dist/
+npm run build                    # typecheck + production build into dist/
 ```
 
-Los tests de integración crean una base de datos `studio_test_*` y la borran al
-terminar. Para usar otro servidor: `MYGRAPH_PORT=6661 uv run pytest`.
+Integration tests create a `studio_test_*` database and delete it when they
+finish. To use another server: `MYGRAPH_PORT=6661 uv run pytest`.
 
-## Arquitectura
+## Architecture
 
 ```
 frontend/   React 19 + Vite + TypeScript + Tailwind v4 + D3 + CodeMirror 6
-  src/api/        clientes HTTP del gateway
+  src/api/        HTTP clients for the gateway
   src/features/   cypher, graph, labels, transfer
-  src/state/      sesión (base de datos/schema) y definiciones de etiqueta
+  src/state/      session (database/schema) and label definitions
 
 gateway/    FastAPI + mygraph-client 0.2
-  src/mygraph_studio/api/        rutas /api/v1/*
-  src/mygraph_studio/services/   validación, import/export, extracción del grafo
-  src/mygraph_studio/store/      almacén SQLite de definiciones de etiqueta
-  src/mygraph_studio/db/         sesión con MyGraph, serialización y errores
+  src/mygraph_studio/api/        /api/v1/* routes
+  src/mygraph_studio/services/   validation, import/export, graph extraction
+  src/mygraph_studio/store/      SQLite store for label definitions
+  src/mygraph_studio/db/         MyGraph session, serialization and errors
 ```
 
-- El gateway envía el Cypher tal cual a MyGraph. El frontend no tiene parser.
-  Los errores de MyGraph (`{code, message, line?, column?}`) llegan sin cambios.
-- Las definiciones de etiqueta viven en el Studio, no en MyGraph. `required` y
-  `unique` los comprueba el gateway, así que solo protegen las escrituras
-  hechas desde el Studio.
-- Import/export está implementado en el gateway con Cypher, porque MyGraph v0.2
-  no lo trae.
+- The gateway sends Cypher to MyGraph as is. The frontend has no parser.
+  MyGraph errors (`{code, message, line?, column?}`) are passed through unchanged.
+- Label definitions live in the Studio, not in MyGraph. `required` and
+  `unique` are checked by the gateway, so they only protect writes made from
+  the Studio.
+- Import/export is implemented in the gateway with Cypher, because MyGraph v0.2
+  does not provide it.
 
-Los detalles están en la [especificación](docs/documentaci_n_my_graph_studio.md).
+Details are in the [specification](docs/documentaci_n_my_graph_studio.md).
 
-## Límites
+## Limitations
 
-Vienen de MyGraph v0.2:
+These come from MyGraph v0.2:
 
-| Límite | Consecuencia en el Studio |
+| Limitation | Effect on the Studio |
 |---|---|
-| Sin `MERGE` | Export/import con `MATCH` + `CREATE` y una propiedad temporal `_sid` |
-| Sin constraints | `required`/`unique` los valida el gateway; botón "Comprobar datos" |
-| Sin tipo fecha | `Date` se guarda como string ISO-8601 |
-| Sin `UNION`, `CALL`, regex `=~` | El editor muestra el error de MyGraph |
-| Sin autenticación ni TLS | El puerto 6660 solo en red interna; el Studio no tiene login todavía |
-| Escrituras serializadas | Import por lotes cortos, sin transacciones abiertas entre peticiones |
+| No `MERGE` | Export/import uses `MATCH` + `CREATE` and a temporary `_sid` property |
+| No constraints | `required`/`unique` are validated by the gateway; "Check data" button |
+| No date type | `Date` is stored as an ISO-8601 string |
+| No `UNION`, `CALL`, regex `=~` | The editor shows the MyGraph error |
+| No authentication or TLS | Port 6660 on the internal network only; the Studio has no login yet |
+| Serialized writes | Import in short batches, with no transactions held open across requests |
 
-## Licencia
+## License
 
 [MIT](LICENSE) © 2026 Julio Contreras
